@@ -1,0 +1,1008 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>合约交易训练台 · 全市场行情中心</title>
+  <style>
+    :root {
+      --bg: #08111f;
+      --panel: rgba(16, 28, 49, 0.94);
+      --panel-soft: rgba(22, 38, 66, 0.78);
+      --line: rgba(148, 163, 184, 0.2);
+      --text: #e5edf8;
+      --muted: #8ca0bd;
+      --accent: #38bdf8;
+      --accent-2: #a78bfa;
+      --green: #22c55e;
+      --red: #ef4444;
+      --yellow: #f59e0b;
+      --shadow: 0 18px 60px rgba(0, 0, 0, 0.35);
+      color-scheme: dark;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(circle at top left, rgba(56, 189, 248, 0.18), transparent 36rem),
+        radial-gradient(circle at top right, rgba(167, 139, 250, 0.15), transparent 32rem),
+        var(--bg);
+      color: var(--text);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+
+    .app {
+      width: min(1480px, 100%);
+      margin: 0 auto;
+      padding: 18px;
+    }
+
+    .hero {
+      display: grid;
+      grid-template-columns: minmax(0, 1fr) auto;
+      gap: 16px;
+      align-items: stretch;
+      margin-bottom: 16px;
+    }
+
+    .brand, .ticker-strip, .card {
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(18px);
+    }
+
+    .brand { padding: 22px; }
+    .brand h1 { margin: 0 0 8px; font-size: clamp(24px, 4vw, 42px); letter-spacing: -0.04em; }
+    .brand p { margin: 0; color: var(--muted); line-height: 1.65; }
+
+    .badges { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 14px; }
+    .badge {
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.72);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 7px 11px;
+      font-size: 12px;
+    }
+
+    .ticker-strip {
+      min-width: min(460px, 100%);
+      padding: 16px;
+      display: grid;
+      gap: 12px;
+    }
+
+    .current-symbol { display: flex; justify-content: space-between; gap: 14px; align-items: flex-start; }
+    .current-symbol h2 { margin: 0; font-size: 25px; }
+    .current-symbol small { color: var(--muted); }
+    .price { font-size: 30px; font-weight: 800; text-align: right; letter-spacing: -0.03em; }
+    .up { color: var(--green); }
+    .down { color: var(--red); }
+    .flat { color: var(--muted); }
+
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; }
+    .stat { background: var(--panel-soft); border: 1px solid var(--line); border-radius: 16px; padding: 11px; }
+    .stat span { display: block; color: var(--muted); font-size: 12px; margin-bottom: 5px; }
+    .stat strong { font-size: 14px; }
+
+    .grid { display: grid; grid-template-columns: minmax(0, 1.45fr) minmax(360px, 0.75fr); gap: 16px; align-items: start; }
+    .card { padding: 18px; }
+    .card + .card { margin-top: 16px; }
+    .card-title { display: flex; justify-content: space-between; gap: 12px; align-items: center; margin-bottom: 14px; }
+    .card-title h3 { margin: 0; font-size: 19px; }
+    .subtle { color: var(--muted); font-size: 13px; }
+
+    .tabs, .toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+    .tab, .pill-btn {
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.74);
+      color: var(--muted);
+      border-radius: 999px;
+      padding: 9px 12px;
+      transition: 0.18s ease;
+    }
+    .tab.active, .pill-btn.active, .tab:hover, .pill-btn:hover {
+      color: #e0f2fe;
+      border-color: rgba(56, 189, 248, 0.65);
+      background: rgba(14, 116, 144, 0.35);
+    }
+
+    .market-controls { display: grid; grid-template-columns: minmax(180px, 1fr) auto auto auto; gap: 10px; align-items: center; margin-bottom: 12px; }
+    .input, select, textarea {
+      width: 100%;
+      border: 1px solid var(--line);
+      background: rgba(15, 23, 42, 0.88);
+      color: var(--text);
+      border-radius: 14px;
+      padding: 11px 12px;
+      outline: none;
+    }
+    textarea { min-height: 118px; resize: vertical; line-height: 1.55; }
+    .check { display: inline-flex; align-items: center; gap: 7px; color: var(--muted); white-space: nowrap; }
+
+    .status-line { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; color: var(--muted); font-size: 13px; }
+    .dot { width: 9px; height: 9px; border-radius: 50%; display: inline-block; background: var(--yellow); box-shadow: 0 0 0 4px rgba(245, 158, 11, 0.12); }
+    .dot.ok { background: var(--green); box-shadow-color: rgba(34, 197, 94, 0.13); }
+    .dot.bad { background: var(--red); box-shadow-color: rgba(239, 68, 68, 0.13); }
+
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 18px; max-height: 620px; }
+    table { width: 100%; border-collapse: collapse; min-width: 920px; }
+    th, td { padding: 12px 11px; border-bottom: 1px solid rgba(148, 163, 184, 0.13); text-align: right; font-size: 13px; }
+    th { position: sticky; top: 0; z-index: 2; background: #0d1b2f; color: var(--muted); font-weight: 600; }
+    th:first-child, td:first-child, th:nth-child(2), td:nth-child(2) { text-align: left; }
+    tbody tr { transition: 0.14s ease; }
+    tbody tr:hover { background: rgba(56, 189, 248, 0.08); }
+    tbody tr.selected { background: rgba(56, 189, 248, 0.15); }
+    .star { border: 0; background: transparent; color: #64748b; font-size: 18px; padding: 0; }
+    .star.on { color: #fbbf24; }
+    .symbol-cell { display: flex; gap: 8px; align-items: center; }
+    .symbol-name { font-weight: 800; }
+    .source-tag { color: var(--muted); font-size: 12px; }
+
+    .load-row { display: flex; justify-content: center; margin-top: 12px; }
+    .button {
+      border: 1px solid rgba(56, 189, 248, 0.55);
+      background: linear-gradient(135deg, rgba(14, 116, 144, 0.8), rgba(88, 28, 135, 0.62));
+      color: white;
+      border-radius: 14px;
+      padding: 11px 14px;
+      font-weight: 700;
+    }
+
+    .training-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; }
+    .field label { display: block; color: var(--muted); font-size: 12px; margin: 0 0 6px; }
+    .signal-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .signal { border: 1px solid var(--line); background: var(--panel-soft); border-radius: 15px; padding: 11px; text-align: center; }
+    .signal strong { display: block; margin-top: 4px; }
+    .kline-tabs { display: flex; gap: 8px; margin-bottom: 10px; flex-wrap: wrap; }
+    .ma-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; }
+    .mini-chart { height: 260px; border: 1px solid var(--line); border-radius: 18px; background: rgba(15, 23, 42, 0.78); width: 100%; }
+    .notice { border: 1px solid rgba(245, 158, 11, 0.35); background: rgba(245, 158, 11, 0.1); color: #fde68a; border-radius: 16px; padding: 12px; line-height: 1.55; }
+
+    @media (max-width: 980px) {
+      .hero, .grid { grid-template-columns: 1fr; }
+      .ticker-strip { min-width: 0; }
+      .market-controls { grid-template-columns: 1fr 1fr; }
+      .training-grid, .signal-grid, .ma-grid, .stats { grid-template-columns: repeat(2, 1fr); }
+      .table-wrap { border: 0; max-height: none; overflow: visible; }
+      table, thead, tbody, tr, th, td { display: block; min-width: 0; }
+      thead { display: none; }
+      tr { border: 1px solid var(--line); border-radius: 18px; padding: 10px; margin-bottom: 10px; background: rgba(15, 23, 42, 0.72); }
+      td { border: 0; display: flex; justify-content: space-between; gap: 16px; text-align: right !important; padding: 7px 4px; }
+      td::before { content: attr(data-label); color: var(--muted); text-align: left; }
+      td:first-child::before { content: ""; }
+    }
+
+    @media (max-width: 560px) {
+      .app { padding: 10px; }
+      .brand, .ticker-strip, .card { border-radius: 18px; padding: 14px; }
+      .market-controls, .training-grid, .signal-grid, .ma-grid, .stats { grid-template-columns: 1fr; }
+      .price { text-align: left; }
+      .current-symbol { flex-direction: column; }
+    }
+  </style>
+</head>
+<body>
+  <main class="app">
+    <section class="hero">
+      <div class="brand">
+        <h1>合约交易训练台</h1>
+        <p>独立的公开行情观察与训练页面。只读取 Binance / OKX 公开市场数据，不连接账户、不保存 API Key、不自动下单。</p>
+        <div class="badges">
+          <span class="badge">公开行情 Only</span>
+          <span class="badge">Spot / USDT 永续</span>
+          <span class="badge">全市场 ticker，不全量订阅 K 线</span>
+          <span class="badge">信号仅：偏多 / 偏空 / 观察 / 禁止开仓</span>
+        </div>
+      </div>
+
+      <aside class="ticker-strip" aria-live="polite">
+        <div class="current-symbol">
+          <div>
+            <small>当前训练交易对</small>
+            <h2 id="currentDisplaySymbol">BTC/USDT</h2>
+            <small id="currentSource">Binance · Spot</small>
+          </div>
+          <div>
+            <div id="currentPrice" class="price flat">--</div>
+            <small id="currentChange" class="flat">24h --</small>
+          </div>
+        </div>
+        <div class="stats">
+          <div class="stat"><span>24h 高</span><strong id="currentHigh">--</strong></div>
+          <div class="stat"><span>24h 低</span><strong id="currentLow">--</strong></div>
+          <div class="stat"><span>24h 成交额</span><strong id="currentVolume">--</strong></div>
+        </div>
+      </aside>
+    </section>
+
+    <section class="grid">
+      <div>
+        <section class="card" id="marketCenter">
+          <div class="card-title">
+            <div>
+              <h3>全市场行情</h3>
+              <div class="subtle">默认展示成交额最高的前 100 个 USDT 交易对；搜索时显示匹配结果。</div>
+            </div>
+          </div>
+
+          <div class="tabs" id="exchangeTabs" role="tablist" aria-label="交易所与市场类型切换">
+            <button class="tab active" data-exchange="binance" data-market="spot">Binance 现货</button>
+            <button class="tab" data-exchange="binance" data-market="swap">Binance U本位合约</button>
+            <button class="tab" data-exchange="okx" data-market="spot">OKX 现货</button>
+            <button class="tab" data-exchange="okx" data-market="swap">OKX 永续合约</button>
+          </div>
+
+          <div class="market-controls" style="margin-top: 14px;">
+            <input id="searchInput" class="input" type="search" placeholder="搜索 BTC、ETH、DOGE、SOL..." autocomplete="off" />
+            <label class="check"><input id="usdtOnly" type="checkbox" checked /> 只显示 USDT</label>
+            <button id="sortChange" class="pill-btn" data-sort="change">按涨跌幅排序</button>
+            <button id="sortVolume" class="pill-btn active" data-sort="volume">按成交额排序</button>
+          </div>
+
+          <div class="status-line">
+            <span id="connDot" class="dot"></span>
+            <span id="connText">准备连接公开行情...</span>
+            <span id="fallbackText"></span>
+          </div>
+
+          <div class="table-wrap">
+            <table aria-label="全市场币价列表">
+              <thead>
+                <tr>
+                  <th>收藏 / 交易对</th>
+                  <th>来源</th>
+                  <th>最新价格</th>
+                  <th>24h 涨跌幅</th>
+                  <th>24h 最高</th>
+                  <th>24h 最低</th>
+                  <th>24h 成交额</th>
+                  <th>最后更新时间</th>
+                </tr>
+              </thead>
+              <tbody id="marketRows"></tbody>
+            </table>
+          </div>
+          <div class="load-row"><button id="loadMore" class="button">加载更多</button></div>
+        </section>
+
+        <section class="card">
+          <div class="card-title">
+            <div>
+              <h3>K 线与均线训练面板</h3>
+              <div class="subtle">仅订阅当前选中交易对的 15m / 1h / 4h / 1d K 线。</div>
+            </div>
+          </div>
+          <div class="kline-tabs" id="klineTabs">
+            <button class="pill-btn active" data-interval="15m">15m</button>
+            <button class="pill-btn" data-interval="1h">1h</button>
+            <button class="pill-btn" data-interval="4h">4h</button>
+            <button class="pill-btn" data-interval="1d">1d</button>
+          </div>
+          <canvas id="miniChart" class="mini-chart" width="900" height="260"></canvas>
+          <div class="ma-grid" style="margin-top: 10px;">
+            <div class="stat"><span>MA5</span><strong id="ma5">--</strong></div>
+            <div class="stat"><span>MA10</span><strong id="ma10">--</strong></div>
+            <div class="stat"><span>MA20</span><strong id="ma20">--</strong></div>
+            <div class="stat"><span>MA60</span><strong id="ma60">--</strong></div>
+          </div>
+        </section>
+      </div>
+
+      <aside>
+        <section class="card">
+          <div class="card-title"><h3>交易训练联动</h3></div>
+          <div class="training-grid">
+            <div class="field"><label>训练币种</label><input id="planSymbol" class="input" readonly value="BTC/USDT" /></div>
+            <div class="field"><label>当前价格</label><input id="riskPrice" class="input" readonly value="--" /></div>
+            <div class="field"><label>账户本金（本地）</label><input id="capitalInput" class="input" type="number" min="0" step="1" placeholder="例如 1000" /></div>
+            <div class="field"><label>单笔风险 %</label><input id="riskPercentInput" class="input" type="number" min="0" step="0.1" placeholder="例如 1" /></div>
+            <div class="field"><label>计划入场价</label><input id="entryInput" class="input" type="number" min="0" step="0.00000001" /></div>
+            <div class="field"><label>计划止损价</label><input id="stopInput" class="input" type="number" min="0" step="0.00000001" /></div>
+          </div>
+          <div class="stats" style="margin-top: 10px;">
+            <div class="stat"><span>建议仓位名义价值</span><strong id="positionValue">--</strong></div>
+            <div class="stat"><span>价格风险</span><strong id="priceRisk">--</strong></div>
+            <div class="stat"><span>训练信号</span><strong id="trainingSignal">观察</strong></div>
+          </div>
+        </section>
+
+        <section class="card">
+          <div class="card-title"><h3>信号面板</h3></div>
+          <div class="signal-grid">
+            <div class="signal"><span class="subtle">趋势</span><strong id="trendSignal">观察</strong></div>
+            <div class="signal"><span class="subtle">波动</span><strong id="volSignal">观察</strong></div>
+            <div class="signal"><span class="subtle">风险</span><strong id="riskSignal">观察</strong></div>
+            <div class="signal"><span class="subtle">开仓</span><strong id="entrySignal">禁止开仓</strong></div>
+          </div>
+          <p class="notice" style="margin: 12px 0 0;">本页面不预测“必涨/必跌”，不构成投资建议。备用 REST 行情存在延迟，不建议用于精确开仓。</p>
+        </section>
+
+        <section class="card">
+          <div class="card-title"><h3>本地交易计划与笔记</h3></div>
+          <textarea id="notes" placeholder="记录交易计划、观察理由和复盘。内容仅保存在本机浏览器。"></textarea>
+        </section>
+      </aside>
+    </section>
+  </main>
+
+  <script>
+    (() => {
+      'use strict';
+
+      const STORAGE = Object.freeze({
+        exchange: 'contractTrading_exchange',
+        marketType: 'contractTrading_marketType',
+        favorites: 'contractTrading_favorites',
+        marketCache: 'contractTrading_marketCache',
+        selectedInstrument: 'contractTrading_selectedInstrument',
+        watchlist: 'contractTrading_watchlist',
+        selectedSymbol: 'contractTrading_selectedSymbol',
+        layout: 'contractTrading_layout',
+        theme: 'contractTrading_theme',
+        indicatorSettings: 'contractTrading_indicatorSettings',
+        riskCalculatorInputs: 'contractTrading_riskCalculatorInputs',
+        notes: 'contractTrading_notes',
+        alertDrafts: 'contractTrading_alertDrafts'
+      });
+
+      const CONFIGS = {
+        binance: {
+          spot: {
+            label: 'Binance · Spot', source: 'Binance 现货',
+            wsTicker: 'wss://stream.binance.com:9443/ws/!ticker@arr',
+            restTicker: 'https://api.binance.com/api/v3/ticker/24hr',
+            restKlines: (symbol, interval) => `https://api.binance.com/api/v3/klines?symbol=${symbol}&interval=${interval}&limit=120`,
+            wsKline: (symbol, interval) => `wss://stream.binance.com:9443/ws/${symbol.toLowerCase()}@kline_${interval}`
+          },
+          swap: {
+            label: 'Binance · USDⓈ-M Perpetual', source: 'Binance U本位合约',
+            wsTicker: 'wss://fstream.binance.com/ws/!ticker@arr',
+            restTicker: 'https://fapi.binance.com/fapi/v1/ticker/24hr',
+            restKlines: (symbol, interval) => `https://fapi.binance.com/fapi/v1/klines?symbol=${symbol}&interval=${interval}&limit=120`,
+            wsKline: (symbol, interval) => `wss://fstream.binance.com/ws/${symbol.toLowerCase()}@kline_${interval}`
+          }
+        },
+        okx: {
+          spot: {
+            label: 'OKX · Spot', source: 'OKX 现货', instType: 'SPOT',
+            instruments: 'https://www.okx.com/api/v5/public/instruments?instType=SPOT',
+            restTicker: 'https://www.okx.com/api/v5/market/tickers?instType=SPOT',
+            restCandles: (instId, bar) => `https://www.okx.com/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=120`
+          },
+          swap: {
+            label: 'OKX · USDT Swap', source: 'OKX 永续合约', instType: 'SWAP',
+            instruments: 'https://www.okx.com/api/v5/public/instruments?instType=SWAP',
+            restTicker: 'https://www.okx.com/api/v5/market/tickers?instType=SWAP',
+            restCandles: (instId, bar) => `https://www.okx.com/api/v5/market/candles?instId=${instId}&bar=${bar}&limit=120`
+          }
+        }
+      };
+
+      const OKX_WS = 'wss://ws.okx.com:8443/ws/v5/public';
+      const OKX_BATCH_SIZE = 80;
+      const REST_POLL_MS = 10000;
+      const INITIAL_LIMIT = 100;
+      const LOAD_STEP = 100;
+
+      const state = {
+        exchange: localStorage.getItem(STORAGE.exchange) || 'binance',
+        marketType: localStorage.getItem(STORAGE.marketType) || 'spot',
+        search: '',
+        usdtOnly: true,
+        sortBy: 'volume',
+        sortDir: 'desc',
+        displayLimit: INITIAL_LIMIT,
+        marketMap: new Map(),
+        instruments: [],
+        favorites: readJson(STORAGE.favorites, []),
+        selected: readJson(STORAGE.selectedInstrument, null),
+        tickerWs: null,
+        klineWs: null,
+        reconnectTimer: null,
+        restTimer: null,
+        okxBatchTimer: null,
+        currentInterval: '15m',
+        candles: []
+      };
+
+      const els = {
+        exchangeTabs: document.getElementById('exchangeTabs'),
+        searchInput: document.getElementById('searchInput'),
+        usdtOnly: document.getElementById('usdtOnly'),
+        sortChange: document.getElementById('sortChange'),
+        sortVolume: document.getElementById('sortVolume'),
+        connDot: document.getElementById('connDot'),
+        connText: document.getElementById('connText'),
+        fallbackText: document.getElementById('fallbackText'),
+        marketRows: document.getElementById('marketRows'),
+        loadMore: document.getElementById('loadMore'),
+        currentDisplaySymbol: document.getElementById('currentDisplaySymbol'),
+        currentSource: document.getElementById('currentSource'),
+        currentPrice: document.getElementById('currentPrice'),
+        currentChange: document.getElementById('currentChange'),
+        currentHigh: document.getElementById('currentHigh'),
+        currentLow: document.getElementById('currentLow'),
+        currentVolume: document.getElementById('currentVolume'),
+        klineTabs: document.getElementById('klineTabs'),
+        miniChart: document.getElementById('miniChart'),
+        ma5: document.getElementById('ma5'),
+        ma10: document.getElementById('ma10'),
+        ma20: document.getElementById('ma20'),
+        ma60: document.getElementById('ma60'),
+        planSymbol: document.getElementById('planSymbol'),
+        riskPrice: document.getElementById('riskPrice'),
+        capitalInput: document.getElementById('capitalInput'),
+        riskPercentInput: document.getElementById('riskPercentInput'),
+        entryInput: document.getElementById('entryInput'),
+        stopInput: document.getElementById('stopInput'),
+        positionValue: document.getElementById('positionValue'),
+        priceRisk: document.getElementById('priceRisk'),
+        trainingSignal: document.getElementById('trainingSignal'),
+        trendSignal: document.getElementById('trendSignal'),
+        volSignal: document.getElementById('volSignal'),
+        riskSignal: document.getElementById('riskSignal'),
+        entrySignal: document.getElementById('entrySignal'),
+        notes: document.getElementById('notes')
+      };
+
+      init();
+
+      function init() {
+        hydrateRiskInputs();
+        bindEvents();
+        applyTabs();
+        if (!state.selected) {
+          state.selected = buildInstrument('BTCUSDT', 'BTC/USDT', 'BTC', 'USDT', 'binance', 'spot');
+        }
+        selectInstrument(state.selected, false);
+        startMarketFeed();
+        renderMarket();
+      }
+
+      function bindEvents() {
+        els.exchangeTabs.addEventListener('click', (event) => {
+          const tab = event.target.closest('[data-exchange]');
+          if (!tab) return;
+          state.exchange = tab.dataset.exchange;
+          state.marketType = tab.dataset.market;
+          state.displayLimit = INITIAL_LIMIT;
+          state.marketMap.clear();
+          state.instruments = [];
+          localStorage.setItem(STORAGE.exchange, state.exchange);
+          localStorage.setItem(STORAGE.marketType, state.marketType);
+          applyTabs();
+          startMarketFeed();
+        });
+
+        els.searchInput.addEventListener('input', debounce(() => {
+          state.search = els.searchInput.value.trim().toUpperCase();
+          state.displayLimit = state.search ? 500 : INITIAL_LIMIT;
+          renderMarket();
+        }, 120));
+
+        els.usdtOnly.addEventListener('change', () => {
+          state.usdtOnly = els.usdtOnly.checked;
+          renderMarket();
+        });
+
+        [els.sortChange, els.sortVolume].forEach((btn) => btn.addEventListener('click', () => {
+          state.sortBy = btn.dataset.sort;
+          els.sortChange.classList.toggle('active', state.sortBy === 'change');
+          els.sortVolume.classList.toggle('active', state.sortBy === 'volume');
+          renderMarket();
+        }));
+
+        els.marketRows.addEventListener('click', (event) => {
+          const star = event.target.closest('[data-favorite]');
+          if (star) {
+            event.stopPropagation();
+            toggleFavorite(star.dataset.favorite);
+            return;
+          }
+          const row = event.target.closest('[data-symbol]');
+          if (!row) return;
+          const item = state.marketMap.get(row.dataset.symbol);
+          if (item) selectInstrument(item, true);
+        });
+
+        els.loadMore.addEventListener('click', () => {
+          state.displayLimit += LOAD_STEP;
+          renderMarket();
+        });
+
+        els.klineTabs.addEventListener('click', (event) => {
+          const btn = event.target.closest('[data-interval]');
+          if (!btn) return;
+          state.currentInterval = btn.dataset.interval;
+          [...els.klineTabs.querySelectorAll('button')].forEach((node) => node.classList.toggle('active', node === btn));
+          startKlineFeed();
+        });
+
+        [els.capitalInput, els.riskPercentInput, els.entryInput, els.stopInput].forEach((input) => {
+          input.addEventListener('input', () => {
+            saveRiskInputs();
+            recalcRisk();
+          });
+        });
+
+        els.notes.value = localStorage.getItem(STORAGE.notes) || '';
+        els.notes.addEventListener('input', debounce(() => localStorage.setItem(STORAGE.notes, els.notes.value), 250));
+      }
+
+      function applyTabs() {
+        [...els.exchangeTabs.querySelectorAll('.tab')].forEach((tab) => {
+          tab.classList.toggle('active', tab.dataset.exchange === state.exchange && tab.dataset.market === state.marketType);
+        });
+      }
+
+      async function startMarketFeed() {
+        closeMarketFeed();
+        setStatus('connecting', '正在连接公开 WebSocket 行情...');
+        await loadInitialMarketSnapshot();
+        if (state.exchange === 'binance') startBinanceTickerWs();
+        else startOkxTickerWs();
+      }
+
+      function closeMarketFeed() {
+        if (state.tickerWs) {
+          state.tickerWs.onclose = null;
+          state.tickerWs.onerror = null;
+          state.tickerWs.onmessage = null;
+          state.tickerWs.close();
+        }
+        state.tickerWs = null;
+        clearTimeout(state.reconnectTimer);
+        clearInterval(state.restTimer);
+        clearInterval(state.okxBatchTimer);
+      }
+
+      async function loadInitialMarketSnapshot() {
+        try {
+          if (state.exchange === 'okx') await loadOkxInstruments();
+          const items = state.exchange === 'binance' ? await fetchBinanceTickers() : await fetchOkxTickers();
+          mergeTickers(items);
+          cacheMarket();
+          renderMarket();
+          ensureSelectedForCurrentMarket();
+        } catch (error) {
+          console.warn(error);
+          setStatus('bad', '初始 REST 快照获取失败，等待 WebSocket 或下一次轮询。');
+          restoreMarketCache();
+        }
+      }
+
+      function startBinanceTickerWs() {
+        const config = CONFIGS.binance[state.marketType];
+        const ws = new WebSocket(config.wsTicker);
+        state.tickerWs = ws;
+        ws.onopen = () => setStatus('ok', 'Binance 全市场 ticker WebSocket 已连接。');
+        ws.onmessage = (event) => {
+          const payload = safeParse(event.data, []);
+          mergeTickers(Array.isArray(payload) ? payload.map(normalizeBinanceTicker) : []);
+          renderMarketThrottled();
+        };
+        ws.onerror = () => setStatus('bad', 'Binance WebSocket 连接失败。');
+        ws.onclose = () => scheduleReconnectOrPolling('Binance WebSocket 已断开，尝试重连；失败时使用 REST 轮询。');
+      }
+
+      function startOkxTickerWs() {
+        const ws = new WebSocket(OKX_WS);
+        state.tickerWs = ws;
+        let subscribed = false;
+        ws.onopen = () => {
+          setStatus('ok', 'OKX 公共 WebSocket 已连接，正在分批订阅 tickers。');
+          subscribed = true;
+          subscribeOkxBatches(ws);
+        };
+        ws.onmessage = (event) => {
+          const payload = safeParse(event.data, null);
+          if (payload && payload.event === 'error') setStatus('bad', `OKX 订阅错误：${payload.msg || payload.code}`);
+          if (payload && payload.arg && payload.arg.channel === 'tickers' && Array.isArray(payload.data)) {
+            mergeTickers(payload.data.map(normalizeOkxTicker));
+            renderMarketThrottled();
+          }
+        };
+        ws.onerror = () => setStatus('bad', 'OKX WebSocket 连接失败。');
+        ws.onclose = () => {
+          clearInterval(state.okxBatchTimer);
+          scheduleReconnectOrPolling(subscribed ? 'OKX WebSocket 已断开，尝试重连。' : 'OKX WebSocket 订阅失败，启用 REST 轮询。');
+        };
+      }
+
+      function subscribeOkxBatches(ws) {
+        const usdt = state.instruments.filter((item) => item.quote === 'USDT');
+        const sorted = [...state.marketMap.values()].sort((a, b) => b.volumeValue - a.volumeValue).map((x) => x.rawSymbol);
+        const mainstream = ['BTC-USDT', 'ETH-USDT', 'SOL-USDT', 'DOGE-USDT', 'XRP-USDT', 'BNB-USDT', 'ADA-USDT', 'AVAX-USDT', 'LINK-USDT', 'TON-USDT'];
+        const candidates = (sorted.length ? sorted : mainstream)
+          .map((symbol) => state.marketType === 'swap' && !symbol.endsWith('-SWAP') ? `${symbol}-SWAP` : symbol);
+        const instIds = [...new Set([...candidates, ...usdt.slice(0, 240).map((x) => x.rawSymbol)])].filter(Boolean);
+        let index = 0;
+        const sendNext = () => {
+          if (!ws || ws.readyState !== WebSocket.OPEN || index >= instIds.length) return;
+          const batch = instIds.slice(index, index + OKX_BATCH_SIZE).map((instId) => ({ channel: 'tickers', instId }));
+          ws.send(JSON.stringify({ op: 'subscribe', args: batch }));
+          index += OKX_BATCH_SIZE;
+        };
+        sendNext();
+        state.okxBatchTimer = setInterval(sendNext, 1200);
+      }
+
+      function scheduleReconnectOrPolling(message) {
+        if (state.tickerWs) state.tickerWs = null;
+        setStatus('bad', message);
+        clearTimeout(state.reconnectTimer);
+        state.reconnectTimer = setTimeout(() => startMarketFeed(), 3000);
+        startRestPolling();
+      }
+
+      function startRestPolling() {
+        clearInterval(state.restTimer);
+        els.fallbackText.textContent = '备用 REST 轮询已启用：行情存在延迟，不建议用于精确开仓。';
+        state.restTimer = setInterval(async () => {
+          try {
+            const items = state.exchange === 'binance' ? await fetchBinanceTickers() : await fetchOkxTickers();
+            mergeTickers(items);
+            renderMarket();
+          } catch (error) {
+            console.warn(error);
+          }
+        }, REST_POLL_MS);
+      }
+
+      async function fetchBinanceTickers() {
+        const response = await fetch(CONFIGS.binance[state.marketType].restTicker);
+        if (!response.ok) throw new Error('Binance REST ticker failed');
+        const data = await response.json();
+        return data.map(normalizeBinanceTicker);
+      }
+
+      async function loadOkxInstruments() {
+        const response = await fetch(CONFIGS.okx[state.marketType].instruments);
+        if (!response.ok) throw new Error('OKX instruments failed');
+        const json = await response.json();
+        state.instruments = (json.data || []).map((item) => {
+          const parsed = parseOkxSymbol(item.instId);
+          return buildInstrument(item.instId, parsed.display, parsed.base, parsed.quote, 'okx', state.marketType);
+        });
+      }
+
+      async function fetchOkxTickers() {
+        const response = await fetch(CONFIGS.okx[state.marketType].restTicker);
+        if (!response.ok) throw new Error('OKX REST tickers failed');
+        const json = await response.json();
+        return (json.data || []).map(normalizeOkxTicker);
+      }
+
+      function normalizeBinanceTicker(item) {
+        const symbol = item.s || item.symbol;
+        const parsed = parseBinanceSymbol(symbol);
+        return {
+          ...buildInstrument(symbol, parsed.display, parsed.base, parsed.quote, 'binance', state.marketType),
+          price: toNumber(item.c || item.lastPrice),
+          changePct: toNumber(item.P || item.priceChangePercent),
+          high: toNumber(item.h || item.highPrice),
+          low: toNumber(item.l || item.lowPrice),
+          volume: toNumber(item.q || item.quoteVolume),
+          volumeValue: toNumber(item.q || item.quoteVolume),
+          updatedAt: item.E || Date.now()
+        };
+      }
+
+      function normalizeOkxTicker(item) {
+        const parsed = parseOkxSymbol(item.instId);
+        const open24h = toNumber(item.open24h);
+        const last = toNumber(item.last);
+        const changePct = open24h ? ((last - open24h) / open24h) * 100 : 0;
+        return {
+          ...buildInstrument(item.instId, parsed.display, parsed.base, parsed.quote, 'okx', state.marketType),
+          price: last,
+          changePct,
+          high: toNumber(item.high24h),
+          low: toNumber(item.low24h),
+          volume: toNumber(item.volCcy24h || item.vol24h),
+          volumeValue: toNumber(item.volCcy24h || item.vol24h),
+          updatedAt: toNumber(item.ts) || Date.now()
+        };
+      }
+
+      function buildInstrument(rawSymbol, displaySymbol, base, quote, exchange, marketType) {
+        return { rawSymbol, displaySymbol, base, quote, exchange, marketType, source: CONFIGS[exchange][marketType].source };
+      }
+
+      function mergeTickers(items) {
+        items.filter(Boolean).forEach((item) => {
+          if (state.usdtOnly && item.quote !== 'USDT') return;
+          state.marketMap.set(item.rawSymbol, item);
+        });
+        if (state.selected && state.marketMap.has(state.selected.rawSymbol)) {
+          state.selected = { ...state.selected, ...state.marketMap.get(state.selected.rawSymbol) };
+          updateSelectedPanels();
+        }
+      }
+
+      function renderMarket() {
+        const rows = getFilteredRows();
+        const visible = rows.slice(0, state.displayLimit);
+        els.marketRows.innerHTML = visible.map((item) => rowHtml(item)).join('') || `<tr><td data-label="状态" colspan="8">暂无匹配行情，尝试更换交易所、市场类型或搜索词。</td></tr>`;
+        els.loadMore.style.display = rows.length > state.displayLimit ? 'inline-flex' : 'none';
+      }
+
+      const renderMarketThrottled = throttle(() => {
+        cacheMarket();
+        renderMarket();
+      }, 700);
+
+      function getFilteredRows() {
+        const term = state.search;
+        return [...state.marketMap.values()]
+          .filter((item) => !state.usdtOnly || item.quote === 'USDT')
+          .filter((item) => !term || item.displaySymbol.includes(term) || item.rawSymbol.includes(term) || item.base.includes(term))
+          .sort((a, b) => {
+            if (isFavorite(a.rawSymbol) !== isFavorite(b.rawSymbol)) return isFavorite(a.rawSymbol) ? -1 : 1;
+            return state.sortBy === 'change' ? b.changePct - a.changePct : b.volumeValue - a.volumeValue;
+          });
+      }
+
+      function rowHtml(item) {
+        const selected = state.selected && state.selected.rawSymbol === item.rawSymbol;
+        return `
+          <tr data-symbol="${escapeHtml(item.rawSymbol)}" class="${selected ? 'selected' : ''}">
+            <td data-label="交易对"><span class="symbol-cell"><button class="star ${isFavorite(item.rawSymbol) ? 'on' : ''}" data-favorite="${escapeHtml(item.rawSymbol)}" aria-label="收藏 ${escapeHtml(item.displaySymbol)}">★</button><span><span class="symbol-name">${escapeHtml(item.displaySymbol)}</span><br><span class="source-tag">${escapeHtml(item.rawSymbol)}</span></span></span></td>
+            <td data-label="来源">${escapeHtml(item.source)}</td>
+            <td data-label="最新价格">${formatPrice(item.price)}</td>
+            <td data-label="24h 涨跌幅" class="${item.changePct >= 0 ? 'up' : 'down'}">${formatPercent(item.changePct)}</td>
+            <td data-label="24h 最高">${formatPrice(item.high)}</td>
+            <td data-label="24h 最低">${formatPrice(item.low)}</td>
+            <td data-label="24h 成交额">${formatCompact(item.volumeValue)}</td>
+            <td data-label="最后更新时间">${formatTime(item.updatedAt)}</td>
+          </tr>`;
+      }
+
+      function selectInstrument(item, persist) {
+        state.selected = item;
+        if (persist) {
+          localStorage.setItem(STORAGE.selectedInstrument, JSON.stringify(item));
+          localStorage.setItem(STORAGE.selectedSymbol, item.displaySymbol);
+          const watchlist = [...new Set([item.rawSymbol, ...readJson(STORAGE.watchlist, [])])].slice(0, 50);
+          localStorage.setItem(STORAGE.watchlist, JSON.stringify(watchlist));
+        }
+        updateSelectedPanels();
+        startKlineFeed();
+        renderMarket();
+      }
+
+      function ensureSelectedForCurrentMarket() {
+        if (state.selected && state.selected.exchange === state.exchange && state.selected.marketType === state.marketType) return;
+        const preferred = [...state.marketMap.values()].find((item) => item.base === 'BTC' && item.quote === 'USDT') || [...state.marketMap.values()][0];
+        if (preferred) selectInstrument(preferred, true);
+      }
+
+      function updateSelectedPanels() {
+        const item = state.selected;
+        if (!item) return;
+        els.currentDisplaySymbol.textContent = item.displaySymbol;
+        els.currentSource.textContent = CONFIGS[item.exchange][item.marketType].label;
+        els.currentPrice.textContent = formatPrice(item.price);
+        els.currentPrice.className = `price ${item.changePct > 0 ? 'up' : item.changePct < 0 ? 'down' : 'flat'}`;
+        els.currentChange.textContent = `24h ${formatPercent(item.changePct)}`;
+        els.currentChange.className = item.changePct > 0 ? 'up' : item.changePct < 0 ? 'down' : 'flat';
+        els.currentHigh.textContent = formatPrice(item.high);
+        els.currentLow.textContent = formatPrice(item.low);
+        els.currentVolume.textContent = formatCompact(item.volumeValue);
+        els.planSymbol.value = item.displaySymbol;
+        els.riskPrice.value = item.price ? String(item.price) : '--';
+        if (!els.entryInput.value && item.price) els.entryInput.value = item.price;
+        recalcRisk();
+      }
+
+      async function startKlineFeed() {
+        if (!state.selected) return;
+        if (state.klineWs) {
+          state.klineWs.onclose = null;
+          state.klineWs.onerror = null;
+          state.klineWs.onmessage = null;
+          state.klineWs.close();
+        }
+        state.klineWs = null;
+        state.candles = [];
+        await loadKlineRest();
+        if (state.selected.exchange === 'binance') startBinanceKlineWs();
+        else startOkxKlineWs();
+      }
+
+      async function loadKlineRest() {
+        try {
+          const item = state.selected;
+          const url = item.exchange === 'binance'
+            ? CONFIGS.binance[item.marketType].restKlines(item.rawSymbol, state.currentInterval)
+            : CONFIGS.okx[item.marketType].restCandles(item.rawSymbol, okxBar(state.currentInterval));
+          const response = await fetch(url);
+          if (!response.ok) throw new Error('Kline REST failed');
+          const json = await response.json();
+          const raw = item.exchange === 'binance' ? json : (json.data || []).reverse();
+          state.candles = raw.map((candle) => item.exchange === 'binance'
+            ? { time: candle[0], open: +candle[1], high: +candle[2], low: +candle[3], close: +candle[4] }
+            : { time: +candle[0], open: +candle[1], high: +candle[2], low: +candle[3], close: +candle[4] });
+          recalcMaAndSignals();
+        } catch (error) {
+          console.warn(error);
+        }
+      }
+
+      function startBinanceKlineWs() {
+        const item = state.selected;
+        const ws = new WebSocket(CONFIGS.binance[item.marketType].wsKline(item.rawSymbol, state.currentInterval));
+        state.klineWs = ws;
+        ws.onmessage = (event) => {
+          const payload = safeParse(event.data, null);
+          if (!payload || !payload.k) return;
+          upsertCandle({ time: payload.k.t, open: +payload.k.o, high: +payload.k.h, low: +payload.k.l, close: +payload.k.c });
+        };
+      }
+
+      function startOkxKlineWs() {
+        const item = state.selected;
+        const ws = new WebSocket(OKX_WS);
+        state.klineWs = ws;
+        ws.onopen = () => ws.send(JSON.stringify({ op: 'subscribe', args: [{ channel: `candle${okxBar(state.currentInterval)}`, instId: item.rawSymbol }] }));
+        ws.onmessage = (event) => {
+          const payload = safeParse(event.data, null);
+          if (!payload || !Array.isArray(payload.data)) return;
+          payload.data.forEach((candle) => upsertCandle({ time: +candle[0], open: +candle[1], high: +candle[2], low: +candle[3], close: +candle[4] }));
+        };
+      }
+
+      function upsertCandle(candle) {
+        const last = state.candles[state.candles.length - 1];
+        if (last && last.time === candle.time) state.candles[state.candles.length - 1] = candle;
+        else state.candles.push(candle);
+        state.candles = state.candles.slice(-120);
+        recalcMaAndSignals();
+      }
+
+      function recalcMaAndSignals() {
+        const closes = state.candles.map((x) => x.close).filter((x) => Number.isFinite(x));
+        const values = { ma5: ma(closes, 5), ma10: ma(closes, 10), ma20: ma(closes, 20), ma60: ma(closes, 60) };
+        els.ma5.textContent = formatPrice(values.ma5);
+        els.ma10.textContent = formatPrice(values.ma10);
+        els.ma20.textContent = formatPrice(values.ma20);
+        els.ma60.textContent = formatPrice(values.ma60);
+        drawChart(closes, values);
+        const last = closes[closes.length - 1] || 0;
+        const trend = last && values.ma20 ? (last > values.ma20 && values.ma20 > values.ma60 ? '偏多' : last < values.ma20 && values.ma20 < values.ma60 ? '偏空' : '观察') : '观察';
+        const range = state.selected && state.selected.high && state.selected.low ? ((state.selected.high - state.selected.low) / state.selected.price) * 100 : 0;
+        const vol = range > 12 ? '禁止开仓' : range > 6 ? '观察' : '偏多';
+        els.trendSignal.textContent = trend;
+        els.volSignal.textContent = vol;
+        recalcRisk();
+      }
+
+      function drawChart(closes, mas) {
+        const canvas = els.miniChart;
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        ctx.clearRect(0, 0, width, height);
+        ctx.fillStyle = 'rgba(15,23,42,0.78)';
+        ctx.fillRect(0, 0, width, height);
+        if (closes.length < 2) return;
+        const min = Math.min(...closes);
+        const max = Math.max(...closes);
+        const pad = 18;
+        const y = (v) => height - pad - ((v - min) / Math.max(max - min, 0.00000001)) * (height - pad * 2);
+        const x = (i) => pad + (i / Math.max(closes.length - 1, 1)) * (width - pad * 2);
+        ctx.strokeStyle = 'rgba(148,163,184,0.16)';
+        ctx.lineWidth = 1;
+        for (let i = 1; i < 4; i++) {
+          ctx.beginPath(); ctx.moveTo(pad, (height / 4) * i); ctx.lineTo(width - pad, (height / 4) * i); ctx.stroke();
+        }
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        closes.forEach((close, index) => index ? ctx.lineTo(x(index), y(close)) : ctx.moveTo(x(index), y(close)));
+        ctx.stroke();
+        ctx.fillStyle = '#8ca0bd';
+        ctx.fillText(`MA5 ${formatPrice(mas.ma5)}  MA20 ${formatPrice(mas.ma20)}  MA60 ${formatPrice(mas.ma60)}`, pad, 18);
+      }
+
+      function recalcRisk() {
+        const capital = +els.capitalInput.value;
+        const riskPct = +els.riskPercentInput.value;
+        const entry = +els.entryInput.value;
+        const stop = +els.stopInput.value;
+        const riskRatio = entry && stop ? Math.abs(entry - stop) / entry : 0;
+        const riskCash = capital && riskPct ? capital * (riskPct / 100) : 0;
+        const position = riskRatio && riskCash ? riskCash / riskRatio : 0;
+        els.positionValue.textContent = position ? formatCompact(position) : '--';
+        els.priceRisk.textContent = riskRatio ? formatPercent(riskRatio * 100) : '--';
+        const riskSignal = !entry || !stop || !capital ? '观察' : riskRatio > 0.08 || riskPct > 2 ? '禁止开仓' : riskRatio > 0.04 ? '观察' : '偏多';
+        els.riskSignal.textContent = riskSignal;
+        const trend = els.trendSignal.textContent;
+        const combined = riskSignal === '禁止开仓' || els.volSignal.textContent === '禁止开仓' ? '禁止开仓' : trend;
+        els.trainingSignal.textContent = combined;
+        els.entrySignal.textContent = combined === '偏多' || combined === '偏空' ? combined : '禁止开仓';
+      }
+
+      function toggleFavorite(symbol) {
+        const set = new Set(state.favorites);
+        if (set.has(symbol)) set.delete(symbol);
+        else set.add(symbol);
+        state.favorites = [...set];
+        localStorage.setItem(STORAGE.favorites, JSON.stringify(state.favorites));
+        renderMarket();
+      }
+
+      function isFavorite(symbol) { return state.favorites.includes(symbol); }
+
+      function parseBinanceSymbol(symbol) {
+        const quotes = ['USDT', 'USDC', 'FDUSD', 'BTC', 'ETH', 'BNB', 'TRY', 'EUR'];
+        const quote = quotes.find((q) => symbol.endsWith(q)) || symbol.slice(-4);
+        const base = symbol.slice(0, -quote.length);
+        return { base, quote, display: `${base}/${quote}` };
+      }
+
+      function parseOkxSymbol(instId) {
+        const parts = instId.split('-');
+        return { base: parts[0], quote: parts[1] || '', display: `${parts[0]}/${parts[1] || ''}` };
+      }
+
+      function okxBar(interval) { return { '15m': '15m', '1h': '1H', '4h': '4H', '1d': '1D' }[interval] || interval; }
+      function ma(values, n) { return values.length >= n ? values.slice(-n).reduce((a, b) => a + b, 0) / n : NaN; }
+      function toNumber(value) { const n = Number(value); return Number.isFinite(n) ? n : 0; }
+      function formatPrice(value) { return Number.isFinite(value) && value ? value.toLocaleString('en-US', { maximumFractionDigits: value >= 1 ? 4 : 8 }) : '--'; }
+      function formatPercent(value) { return Number.isFinite(value) ? `${value >= 0 ? '+' : ''}${value.toFixed(2)}%` : '--'; }
+      function formatCompact(value) { return Number.isFinite(value) && value ? Intl.NumberFormat('en-US', { notation: 'compact', maximumFractionDigits: 2 }).format(value) : '--'; }
+      function formatTime(value) { return value ? new Date(value).toLocaleTimeString('zh-CN', { hour12: false }) : '--'; }
+      function escapeHtml(text) { return String(text).replace(/[&<>'"]/g, (m) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[m])); }
+      function safeParse(text, fallback) { try { return JSON.parse(text); } catch { return fallback; } }
+      function readJson(key, fallback) { return safeParse(localStorage.getItem(key), fallback) ?? fallback; }
+      function debounce(fn, wait) { let t; return (...args) => { clearTimeout(t); t = setTimeout(() => fn(...args), wait); }; }
+      function throttle(fn, wait) { let pending = false; return () => { if (pending) return; pending = true; setTimeout(() => { pending = false; fn(); }, wait); }; }
+
+      function setStatus(kind, text) {
+        els.connDot.className = `dot ${kind === 'ok' ? 'ok' : kind === 'bad' ? 'bad' : ''}`;
+        els.connText.textContent = text;
+        if (kind === 'ok') els.fallbackText.textContent = '';
+      }
+
+      function saveRiskInputs() {
+        localStorage.setItem(STORAGE.riskCalculatorInputs, JSON.stringify({
+          capital: els.capitalInput.value,
+          riskPercent: els.riskPercentInput.value,
+          entry: els.entryInput.value,
+          stop: els.stopInput.value
+        }));
+      }
+
+      function hydrateRiskInputs() {
+        const saved = readJson(STORAGE.riskCalculatorInputs, {});
+        els.capitalInput.value = saved.capital || '';
+        els.riskPercentInput.value = saved.riskPercent || '';
+        els.entryInput.value = saved.entry || '';
+        els.stopInput.value = saved.stop || '';
+      }
+
+      function cacheMarket() {
+        const sample = [...state.marketMap.values()].sort((a, b) => b.volumeValue - a.volumeValue).slice(0, 300);
+        localStorage.setItem(STORAGE.marketCache, JSON.stringify({ exchange: state.exchange, marketType: state.marketType, items: sample, ts: Date.now() }));
+      }
+
+      function restoreMarketCache() {
+        const cache = readJson(STORAGE.marketCache, null);
+        if (!cache || cache.exchange !== state.exchange || cache.marketType !== state.marketType) return;
+        mergeTickers(cache.items || []);
+        renderMarket();
+      }
+    })();
+  </script>
+</body>
+</html>
